@@ -34,4 +34,7 @@ export type UserResponse = {
     appMetadata?: Map<string, unknown>;
 }
 
-export type Token = string;
+export type Token = {
+    token: string;
+    jwtid: string;
+}

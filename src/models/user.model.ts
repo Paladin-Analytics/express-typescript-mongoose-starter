@@ -1,5 +1,6 @@
 import { jwtKey, jwtExpTime } from '../config/jwt';
 
+import isEmail from 'validator/lib/isEmail';
 import { compareSync, hashSync } from 'bcryptjs';
 import { Document, Model, model, Schema } from 'mongoose';
 import moment from 'moment';
@@ -15,19 +16,19 @@ import { PublishEvent } from '../common/events';
 import { SendTemplatedEmail } from '../common/mail';
 
 // constants
-import { EMAIL_VERIFICATION } from '../common/mail';
+import { EMAIL_VERIFICATION, PASSWORD_RESET } from '../common/mail';
 
 export const UserSchema = new Schema({
     // basic
     email: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        validate: [ isEmail, 'Please enter a valid email' ],
     },
     phoneNumber: {
         type: String,
         required: true,
-        unique: true
     },
     password: {
         type: String,
@@ -107,6 +108,10 @@ export const UserSchema = new Schema({
         type: Date,
         default: Date.now()
     },
+    lastPasswordResetAt: {
+        type: Date,
+        default: null,
+    },
 
     loginHistory: {
         type: [ { 
@@ -115,6 +120,10 @@ export const UserSchema = new Schema({
                 default: Date.now()
             },
             ip: {
+                type: String,
+                default: '',
+            },
+            jwtid: {
                 type: String,
                 default: '',
             }
@@ -145,6 +154,7 @@ interface IVerificationCodeSchema extends Document {
 }
 
 export interface IUserBase extends IDocument {
+    _emailModified: boolean;
     // basic
     email: string;
     phoneNumber: string;
@@ -183,10 +193,12 @@ export interface IUserBase extends IDocument {
     // history
     createdAt: Date;
     lastUpdateAt: Date;
+    lastPasswordResetAt?: Date;
 
     loginHistory: [{
         loginAt: Date;
         ip: string;
+        jwtid: string;
     }];
 
     // devices
@@ -197,8 +209,10 @@ export interface IUserBase extends IDocument {
     appMetadata: Map<string, unknown>;
 
     // methods
+    setAndSendPasswordReset(): Promise<boolean>;
     comparePassword(password: string): boolean;
     compareEmailVerificationCode(code: string): boolean;
+    compareForgotPassword(code: string): boolean;
     getSafe(): UserResponse;
     generateJWT(): Token;
 }
@@ -218,32 +232,36 @@ UserSchema.pre<IUserBase>('save', function (next) {
     }
 
     if (this.isModified('email') || this.isNew) {
+        this._emailModified = true;
+        this.emailVerified = false;
+        
         this.emailVerificationCode = generate({
             length: 6,
             charset: 'numeric',
-        }),
+        });
     
         this.emailVerification = <IVerificationCodeSchema>{
             hash: hashSync(this.emailVerificationCode, 10), 
             expiresAt: moment().add(30 * 60, 's').toDate(),
         }
-
-        SendTemplatedEmail(EMAIL_VERIFICATION, { 
-            code: this.emailVerificationCode, 
-            user: {
-                _id: this._id,
-                firstName: this.firstName,
-                lastName: this.lastName,
-            }
-        });
-
-        console.log(`SEND VERIFICATION CODE = ${this.emailVerificationCode}`);
     }
     
     next();
 });
 
 UserSchema.post('save', async function(doc: IUserBase) {
+    if (doc._emailModified) {
+        SendTemplatedEmail(EMAIL_VERIFICATION, { 
+            code: doc.emailVerificationCode, 
+            user: {
+                _id: doc._id,
+                firstName: doc.firstName,
+                lastName: doc.lastName,
+                email: doc.email,
+            }
+        });
+    }
+
     if (doc._new) {
         await PublishEvent('user.new', doc.getSafe());
     } else if (doc._modified){
@@ -253,6 +271,28 @@ UserSchema.post('save', async function(doc: IUserBase) {
 
 // Methods and virtuals
 
+UserSchema.methods.setAndSendPasswordReset = async function(): Promise<boolean> {
+    const resetCode = generate({
+        length: 6,
+        charset: 'numeric',
+    });
+
+    this.forgotPassword = <IVerificationCodeSchema>{
+        hash: hashSync(resetCode, 10),
+        expiresAt: moment().add(30 * 60, 's').toDate(),
+    }
+
+   return await SendTemplatedEmail(PASSWORD_RESET, { 
+        code: resetCode, 
+        user: {
+            _id: this._id,
+            firstName: this.firstName,
+            lastName: this.lastName,
+            email: this.email,
+        }
+    });
+}
+
 UserSchema.methods.comparePassword = function(password: string): boolean {
     return compareSync(password, this.password);
 };
@@ -260,6 +300,13 @@ UserSchema.methods.comparePassword = function(password: string): boolean {
 UserSchema.methods.compareEmailVerificationCode = function(code: string): boolean {
     if (this.emailVerification && this.emailVerification.hash && this.emailVerification.expiresAt) {
         return compareSync(code, this.emailVerification.hash) && new Date() < this.emailVerification.expiresAt;
+    }
+    return false;
+};
+
+UserSchema.methods.compareForgotPassword = function(code: string): boolean {
+    if (this.forgotPassword && this.forgotPassword.hash && this.forgotPassword.expiresAt) {
+        return compareSync(code, this.forgotPassword.hash) && new Date() < this.forgotPassword.expiresAt;
     }
     return false;
 };
@@ -300,16 +347,23 @@ UserSchema.methods.getSafe = function(): UserResponse {
 }
 
 UserSchema.methods.generateJWT = function(): Token{
-    return jwtSign({
+    const jwtid = generate({
+        length: 24,
+        charset: 'alphanumeric',
+    });
+
+    const token = jwtSign({
         user_id: this._id,
     }, <Secret>jwtKey, { 
         expiresIn: jwtExpTime,
-        jwtid: generate({
-            length: 24,
-            charset: 'alphanumeric',
-        }),
+        jwtid,
         algorithm: 'HS256',
     });
+
+    return {
+        jwtid,
+        token,
+    }
 }
 
 export const UserModel = model<IUserBase, IUserModel>('User', UserSchema);

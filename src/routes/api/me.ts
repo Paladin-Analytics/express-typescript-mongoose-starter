@@ -3,8 +3,10 @@ import { OK, INTERNAL_SERVER_ERROR, NOT_FOUND, BAD_REQUEST } from 'http-status-c
 
 import response from '../../helpers/response';
 
-// Controllers
-import * as UserService from '../../services/user.service';
+// Services
+import UserService from '../../services/user.service';
+
+// types
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 
 const router = express.Router();
