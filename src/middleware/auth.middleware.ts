@@ -1,5 +1,6 @@
 import { jwtKey } from '../config/jwt';
 
+import { Types } from 'mongoose';
 import expressjwt, { IsRevokedCallback } from 'express-jwt';
 import { Response, Router, Request, NextFunction } from 'express';
 import { UNAUTHORIZED } from 'http-status-codes';
@@ -8,7 +9,6 @@ import response from '../helpers/response';
 
 // Services
 import UserService from '../services/user.service';
-import { Types } from 'mongoose';
 
 interface UserPermissionPopulated {
     workspace: {
@@ -76,7 +76,6 @@ export const checkScope = (scope: string) => {
 
             if (tmpPerm.workspace._id.equals(workspaceId))  {
                 for (const s of tmpPerm.role.scopes) {
-                    console.log(s);
                     if (s === scope) {
                         next();
                         return;

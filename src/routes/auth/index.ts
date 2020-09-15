@@ -8,8 +8,8 @@ import response from '../../helpers/response';
 // Controllers
 import UserService from '../../services/user.service';
 
-const defaultWorkspace = '5f60a3b484f1d50e673bfd69';
-const defaultUserRole = '5f60a3b484f1d50e673bfd6a';
+const defaultWorkspace = '5f60de416265931ee94f0e2f';
+const defaultUserRole = '5f60de416265931ee94f0e30';
 
 const router = express.Router();
 

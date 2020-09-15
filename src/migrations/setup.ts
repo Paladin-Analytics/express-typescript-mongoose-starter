@@ -18,6 +18,15 @@ const workspaces = [
 
 const roles = [
     {
+        name: 'admin',
+        scopes: [
+            'workspace.invite.get',
+            'workspace.invite.update',
+            'user.update',
+            'user.get',
+        ]
+    },
+    {
         name: 'user',
         scopes: [
             'user.update',

@@ -1,4 +1,4 @@
-import { Model, model, Schema } from 'mongoose';
+import { Model, Schema } from 'mongoose';
 
 // Types
 import { IDocument } from '../types/mongoose.types';
@@ -25,7 +25,7 @@ export const RoleSchema = new Schema({
 export interface IRoleBase extends IDocument {
     // properties
     name: string;
-    scopes: [ string ];
+    scopes: Array<string>;
     createdAt: Date;
     lastUpdateAt: Date;
 
@@ -57,5 +57,3 @@ RoleSchema.post('save', async function(doc: IRoleBase) {
 RoleSchema.methods.comparePassword = function() {
 };
 */
-
-export const RoleModel = model<IRoleBase, IRoleModel>('role', RoleSchema);

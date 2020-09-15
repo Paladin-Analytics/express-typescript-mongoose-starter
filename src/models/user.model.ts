@@ -2,14 +2,10 @@ import { jwtKey, jwtExpTime } from '../config/jwt';
 
 import isEmail from 'validator/lib/isEmail';
 import { compareSync, hashSync } from 'bcryptjs';
-import { Types, Document, Model, model, Schema } from 'mongoose';
+import { Types, Document, Model, Schema } from 'mongoose';
 import moment from 'moment';
 import { generate } from 'randomstring';
 import { sign as jwtSign, Secret } from 'jsonwebtoken';
-
-// Models
-import './workspace.model';
-import './role.model';
 
 // Types
 import { UserResponse, Token } from '../types/user.types';
@@ -156,11 +152,11 @@ export const UserSchema = new Schema({
         {
             workspace: {
                 type: Types.ObjectId,
-                ref: 'workspace',
+                ref: 'workspaces',
             },
             role: {
                 type: Types.ObjectId,
-                ref: 'role',
+                ref: 'roles',
             }
         }
     ]
@@ -393,4 +389,3 @@ UserSchema.methods.generateJWT = function(): Token{
     }
 }
 
-export const UserModel = model<IUserBase, IUserModel>('User', UserSchema);

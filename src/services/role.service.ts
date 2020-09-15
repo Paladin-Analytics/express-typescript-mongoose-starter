@@ -1,4 +1,7 @@
-import { RoleModel, IRoleBase } from '../models/role.model';
+import { model } from 'mongoose';
+import { IRoleBase, IRoleModel, RoleSchema } from '../models/role.model';
+
+export const RoleModel = model<IRoleBase, IRoleModel>('roles', RoleSchema);
 
 export default class RoleService {
     // Methods

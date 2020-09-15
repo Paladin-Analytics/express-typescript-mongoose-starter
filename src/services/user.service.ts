@@ -1,8 +1,14 @@
-import { UserModel, IUserBase } from '../models/user.model';
+import { model} from 'mongoose';
+
+import { IUserModel, IUserBase, UserSchema } from '../models/user.model';
+import { WorkspaceModel } from './workspace.service';
+import { RoleModel } from './role.service';
 
 interface IUserUpdate extends IUserBase{
     deviceId: string;
 }
+
+export const UserModel = model<IUserBase, IUserModel>('users', UserSchema);
 
 export default class UserService {
     // Methods
@@ -13,15 +19,15 @@ export default class UserService {
 
     static async GetByEmail(email: string): Promise<IUserBase | null>{
         const user = await UserModel.findOne({ email: email })
-            .populate('permissions.workspace')
-            .populate('permissions.role');
+            .populate('permissions.workspace', null , WorkspaceModel)
+            .populate('permissions.role', null, RoleModel);
         return user;
     }
 
     static async GetById(id: string): Promise<IUserBase | null> {
         const user = await UserModel.findById(id)
-            .populate('permissions.workspace')
-            .populate('permissions.role');
+            .populate('permissions.workspace', null , WorkspaceModel)
+            .populate('permissions.role', null, RoleModel);
         return user;
     }
 

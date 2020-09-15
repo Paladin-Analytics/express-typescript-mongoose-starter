@@ -1,4 +1,4 @@
-import { Model, model, Schema } from 'mongoose';
+import { Model, Schema } from 'mongoose';
 
 // Types
 import { IDocument } from '../types/mongoose.types';
@@ -53,4 +53,3 @@ WorkspaceSchema.methods.comparePassword = function() {
 };
 */
 
-export const WorkspaceModel = model<IWorkspaceBase, IWorkspaceModel>('workspace', WorkspaceSchema);
