@@ -1,4 +1,5 @@
 import { jwtKey } from '../config/jwt';
+import { scopes, roles } from '../config/permissions';
 
 import { Types } from 'mongoose';
 import expressjwt, { IsRevokedCallback } from 'express-jwt';
@@ -10,14 +11,9 @@ import response from '../helpers/response';
 // Services
 import UserService from '../services/user.service';
 
-interface UserPermissionPopulated {
-    workspace: {
-        _id: Types.ObjectId;
-        name: string;
-    }
-    role: {
-        scopes: [string];
-    }
+interface UserPermission {
+    workspace: Types.ObjectId;
+    role: string;
 }
 
 const isJWTRevoked: IsRevokedCallback = (req, payload, done) => {
@@ -67,19 +63,18 @@ export const checkScope = (scope: string) => {
       if (user) {
         let workspaceId = authReq.workspace;
 
-        if(user.permissions.length > 0 && workspaceId.length === 0) {
-            workspaceId = (user.permissions[0] as UserPermissionPopulated).workspace._id.toHexString();
+        if(user.permissions.length > 0 && !Types.ObjectId.isValid(workspaceId)) {
+            workspaceId = (user.permissions[0].workspace).toString();
+            authReq.workspace = workspaceId;
         }
 
         for (const perm of user.permissions) {
-            const tmpPerm = perm as UserPermissionPopulated;
-
-            if (tmpPerm.workspace._id.equals(workspaceId))  {
-                for (const s of tmpPerm.role.scopes) {
-                    if (s === scope) {
-                        next();
-                        return;
-                    }
+            const tmpPerm = perm as UserPermission;
+            if (tmpPerm.workspace.equals(workspaceId))  {
+                const permScopes = scopes[tmpPerm.role] || [];
+                if (permScopes.indexOf(scope) > -1) {
+                    next();
+                    return;
                 }
             }
         }

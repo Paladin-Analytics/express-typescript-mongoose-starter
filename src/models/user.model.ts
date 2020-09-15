@@ -1,8 +1,9 @@
 import { jwtKey, jwtExpTime } from '../config/jwt';
+import { roles } from '../config/permissions';
 
 import isEmail from 'validator/lib/isEmail';
 import { compareSync, hashSync } from 'bcryptjs';
-import { Types, Document, Model, Schema } from 'mongoose';
+import { Types, Model, Schema } from 'mongoose';
 import moment from 'moment';
 import { generate } from 'randomstring';
 import { sign as jwtSign, Secret } from 'jsonwebtoken';
@@ -10,6 +11,7 @@ import { sign as jwtSign, Secret } from 'jsonwebtoken';
 // Types
 import { UserResponse, Token } from '../types/user.types';
 import { IDocument } from '../types/mongoose.types';
+import { IHashCodeSchema } from '../types/verification.types';
 
 // Helpers
 import { PublishEvent } from '../common/events';
@@ -155,17 +157,13 @@ export const UserSchema = new Schema({
                 ref: 'workspaces',
             },
             role: {
-                type: Types.ObjectId,
-                ref: 'roles',
+                type: String,
+                enum: roles,
+                default: 'user'
             }
         }
     ]
 });
-
-interface IVerificationCodeSchema extends Document {
-    hash: string;
-    expiresAt?: Date;
-}
 
 export interface IUserBase extends IDocument {
     _emailModified: boolean;
@@ -216,18 +214,16 @@ export interface IUserBase extends IDocument {
     }];
 
     // devices
-    deviceIds: [string];
+    deviceIds: Array<string>;
 
     // metadata
     userMetadata: Map<string, unknown>;
     appMetadata: Map<string, unknown>;
 
-    permissions: [
-        {
-            workspace: unknown;
-            role: unknown;
-        }
-    ]
+    permissions: Array<{
+        workspace: Types.ObjectId;
+        role: string;
+    }>;
 
     // methods
     setAndSendPasswordReset(): Promise<boolean>;
@@ -261,7 +257,7 @@ UserSchema.pre<IUserBase>('save', function (next) {
             charset: 'numeric',
         });
     
-        this.emailVerification = <IVerificationCodeSchema>{
+        this.emailVerification = <IHashCodeSchema>{
             hash: hashSync(this.emailVerificationCode, 10), 
             expiresAt: moment().add(30 * 60, 's').toDate(),
         }
@@ -298,7 +294,7 @@ UserSchema.methods.setAndSendPasswordReset = async function(): Promise<boolean> 
         charset: 'numeric',
     });
 
-    this.forgotPassword = <IVerificationCodeSchema>{
+    this.forgotPassword = <IHashCodeSchema>{
         hash: hashSync(resetCode, 10),
         expiresAt: moment().add(30 * 60, 's').toDate(),
     }

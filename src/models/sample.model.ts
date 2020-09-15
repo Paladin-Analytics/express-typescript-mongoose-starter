@@ -36,9 +36,9 @@ SampleSchema.pre<ISampleBase>('save', function (next) {
 
 SampleSchema.post('save', async function(doc: ISampleBase) {
     if (doc._new) {
-        //await PublishEvent('user.new', doc.getSafe());
+        //await PublishEvent('sample.new', doc.getSafe());
     } else if (doc._modified){
-        //await PublishEvent('user.update', doc.getSafe());
+        //await PublishEvent('sample.update', doc.getSafe());
     }
 });
 

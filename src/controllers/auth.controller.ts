@@ -3,10 +3,10 @@ import { BAD_REQUEST, CREATED, UNAUTHORIZED, INTERNAL_SERVER_ERROR,
         OK, NOT_FOUND, CONFLICT, FORBIDDEN } from 'http-status-codes';
 
 // Helpers
-import response from '../../helpers/response';
+import response from '../helpers/response';
 
 // Controllers
-import UserService from '../../services/user.service';
+import UserService from '../services/user.service';
 
 const defaultWorkspace = '5f60de416265931ee94f0e2f';
 const defaultUserRole = '5f60de416265931ee94f0e30';
@@ -40,7 +40,6 @@ router.post('/sign-up', async (req, res) => {
         const token = user.generateJWT();
 
         // Add workspace logic etc. here
-
         user.loginHistory.push({
             ip: req.connection.remoteAddress || '',
             loginAt: new Date(),

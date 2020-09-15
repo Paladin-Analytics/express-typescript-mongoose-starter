@@ -1,18 +1,18 @@
 import express, { Request, Response } from 'express';
 import { OK, INTERNAL_SERVER_ERROR, NOT_FOUND, BAD_REQUEST } from 'http-status-codes';
 
-import response from '../../helpers/response';
+import response from '../helpers/response';
 
 // Services
-import UserService from '../../services/user.service';
+import UserService from '../services/user.service';
 
 // types
-import { AuthenticatedRequest, checkScope } from '../../middleware/auth.middleware';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 const router = express.Router();
 router.use(express.json());
 
-router.get('/', checkScope('user.get'), async(req: Request, res: Response) => {
+router.get('/', async(req: Request, res: Response) => {
     const authReq = <AuthenticatedRequest>req;
 
     try {
@@ -26,7 +26,7 @@ router.get('/', checkScope('user.get'), async(req: Request, res: Response) => {
     }
 });
 
-router.patch('/', checkScope('user.update'), async(req: Request, res: Response) => {
+router.patch('/', async(req: Request, res: Response) => {
     const authReq = <AuthenticatedRequest>req;
     
     const { body } = authReq;
