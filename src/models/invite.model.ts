@@ -9,6 +9,7 @@ import isEmail from 'validator/lib/isEmail';
 // Types
 import { IDocument } from '../types/mongoose.types';
 import { IHashCodeSchema } from '../types/verification.types';
+import { InviteResponse } from '../types/invite.types';
 
 // Helpers
 import { SendTemplatedEmail } from '../common/mail';
@@ -93,6 +94,7 @@ export interface IInviteBase extends IDocument {
 
     // methods
     compareInviteCode(code: string): boolean;
+    getSafe(): InviteResponse;
 }
 
 export type IInviteModel = Model<IInviteBase>
@@ -116,6 +118,8 @@ InviteSchema.pre<IInviteBase>('save', function (next) {
 
         this._invitationModified = true;
     }
+    
+    this.lastUpdateAt = new Date();
     
     next();
 });
@@ -150,6 +154,26 @@ InviteSchema.methods.compareInviteCode = function(code: string): boolean {
     }
     return false;
 };
+
+InviteSchema.methods.getSafe = function(): InviteResponse {
+    const parsed = {
+        _id: this._id,
+        email: this.email,
+        firstName: this.firstName,
+        lastName: this.lastName,
+        role: this.role,
+
+        workspaceId: this.workspaceId,
+
+        accepted: this.accepted,
+
+        createdAt: this.createdAt,
+        lastUpdateAt: this.lastUpdateAt,
+        acceptedAt: this.acceptedAt,
+    };
+
+    return parsed;
+}
 
 /*
 InviteSchema.methods.comparePassword = function() {

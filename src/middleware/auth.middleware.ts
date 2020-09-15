@@ -4,7 +4,7 @@ import { scopes, roles } from '../config/permissions';
 import { Types } from 'mongoose';
 import expressjwt, { IsRevokedCallback } from 'express-jwt';
 import { Response, Router, Request, NextFunction } from 'express';
-import { UNAUTHORIZED } from 'http-status-codes';
+import { UNAUTHORIZED, FORBIDDEN } from 'http-status-codes';
 
 import response from '../helpers/response';
 
@@ -56,7 +56,7 @@ export const checkScope = (scope: string) => {
       try {
         user = await UserService.GetById(userId);
       } catch (id) {
-        response(res, UNAUTHORIZED, 'Invalid user token', null);
+        response(res, UNAUTHORIZED, 'Missing user', null);
         return;
       }
 
@@ -80,7 +80,7 @@ export const checkScope = (scope: string) => {
         }
       }
   
-      response(res, UNAUTHORIZED, 'Invalid user token', null);
+      response(res, FORBIDDEN, 'Forbidden', null);
     };
 };
 

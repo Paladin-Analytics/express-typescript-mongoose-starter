@@ -296,7 +296,7 @@ UserSchema.methods.setAndSendPasswordReset = async function(): Promise<boolean> 
 
     this.forgotPassword = <IHashCodeSchema>{
         hash: hashSync(resetCode, 10),
-        expiresAt: moment().add(30 * 60, 's').toDate(),
+        expiresAt: moment().add(7, 'd').toDate(),
     }
 
    return await SendTemplatedEmail(PASSWORD_RESET, { 
