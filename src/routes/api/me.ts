@@ -7,13 +7,14 @@ import response from '../../helpers/response';
 import UserService from '../../services/user.service';
 
 // types
-import { AuthenticatedRequest } from '../../middleware/auth.middleware';
+import { AuthenticatedRequest, checkScope } from '../../middleware/auth.middleware';
 
 const router = express.Router();
 router.use(express.json());
 
-router.get('/', async(req: Request, res: Response) => {
+router.get('/', checkScope('user.get'), async(req: Request, res: Response) => {
     const authReq = <AuthenticatedRequest>req;
+
     try {
         const user = await UserService.GetById(authReq.user.user_id);
         if (user) {
@@ -25,9 +26,10 @@ router.get('/', async(req: Request, res: Response) => {
     }
 });
 
-router.patch('/', async(req: Request, res: Response) => {
-    const { body } = req;
+router.patch('/', checkScope('user.update'), async(req: Request, res: Response) => {
     const authReq = <AuthenticatedRequest>req;
+    
+    const { body } = authReq;
 
     if (!body) return response(res, BAD_REQUEST, 'Missing field', null);
 
