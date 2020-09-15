@@ -28,6 +28,10 @@ export const CreateAuthenticatedRouter = ():Router => {
     const router = Router();
     router.use(authMiddleware);
     router.use(authErrorHandler);
+    router.use((req: Request, res: Response, next: () => unknown) => {
+        console.log(req.get('Active-Workspace'));
+        next();
+    })
     return router;
 }
 

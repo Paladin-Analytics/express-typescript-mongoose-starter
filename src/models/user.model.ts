@@ -2,10 +2,14 @@ import { jwtKey, jwtExpTime } from '../config/jwt';
 
 import isEmail from 'validator/lib/isEmail';
 import { compareSync, hashSync } from 'bcryptjs';
-import { Document, Model, model, Schema } from 'mongoose';
+import { Types, Document, Model, model, Schema } from 'mongoose';
 import moment from 'moment';
 import { generate } from 'randomstring';
 import { sign as jwtSign, Secret } from 'jsonwebtoken';
+
+// Models
+import './workspace.model';
+import './role.model';
 
 // Types
 import { UserResponse, Token } from '../types/user.types';
@@ -145,7 +149,21 @@ export const UserSchema = new Schema({
     appMetadata: {
         type: Schema.Types.Mixed,
         default: {},
-    }
+    },
+
+    // Permissions
+    permissions: [
+        {
+            workspace: {
+                type: Types.ObjectId,
+                ref: 'workspace',
+            },
+            role: {
+                type: Types.ObjectId,
+                ref: 'role',
+            }
+        }
+    ]
 });
 
 interface IVerificationCodeSchema extends Document {
@@ -207,6 +225,13 @@ export interface IUserBase extends IDocument {
     // metadata
     userMetadata: Map<string, unknown>;
     appMetadata: Map<string, unknown>;
+
+    permissions: [
+        {
+            workspace: unknown;
+            role: unknown;
+        }
+    ]
 
     // methods
     setAndSendPasswordReset(): Promise<boolean>;
@@ -342,6 +367,8 @@ UserSchema.methods.getSafe = function(): UserResponse {
         // metadata
         userMetadata: this.userMetadata,
         appMetadata: this.appMetadata,
+
+        permissions: this.permissions,
     };
     return parsed;
 }

@@ -3,7 +3,15 @@ import { Model, model, Schema } from 'mongoose';
 // Types
 import { IDocument } from '../types/mongoose.types';
 
-export const SampleSchema = new Schema({
+export const RoleSchema = new Schema({
+    name: {
+        type: String,
+        required: true,
+    },
+    scopes: {
+        type: [String],
+        default: [],
+    },
     createdAt: {
         type: Date,
         default: Date.now,
@@ -14,27 +22,28 @@ export const SampleSchema = new Schema({
     }
 });
 
-export interface ISampleBase extends IDocument {
+export interface IRoleBase extends IDocument {
     // properties
-    sample: boolean;
+    name: string;
+    scopes: [ string ];
     createdAt: Date;
     lastUpdateAt: Date;
 
     // methods
 }
 
-export type ISampleModel = Model<ISampleBase>
+export type IRoleModel = Model<IRoleBase>
 
 // Middleware
 
-SampleSchema.pre<ISampleBase>('save', function (next) {
+RoleSchema.pre<IRoleBase>('save', function (next) {
     this._new = this.isNew;
     this._modified = this.isModified();
     
     next();
 });
 
-SampleSchema.post('save', async function(doc: ISampleBase) {
+RoleSchema.post('save', async function(doc: IRoleBase) {
     if (doc._new) {
         //await PublishEvent('user.new', doc.getSafe());
     } else if (doc._modified){
@@ -45,8 +54,8 @@ SampleSchema.post('save', async function(doc: ISampleBase) {
 // Methods and virtuals
 
 /*
-SampleSchema.methods.comparePassword = function() {
+RoleSchema.methods.comparePassword = function() {
 };
 */
 
-export const SampleModel = model<ISampleBase, ISampleModel>('<model_name>', SampleSchema);
+export const RoleModel = model<IRoleBase, IRoleModel>('role', RoleSchema);

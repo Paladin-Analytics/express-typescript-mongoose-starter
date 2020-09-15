@@ -32,6 +32,13 @@ export type UserResponse = {
     // metadata
     userMetadata?: Map<string, unknown>;
     appMetadata?: Map<string, unknown>;
+
+    permissions: [
+        {
+            workspace: unknown;
+            role: unknown;
+        }
+    ]
 }
 
 export type Token = {

@@ -3,7 +3,11 @@ import { Model, model, Schema } from 'mongoose';
 // Types
 import { IDocument } from '../types/mongoose.types';
 
-export const SampleSchema = new Schema({
+export const WorkspaceSchema = new Schema({
+    name: {
+        type: String,
+        required: true,
+    },
     createdAt: {
         type: Date,
         default: Date.now,
@@ -11,30 +15,30 @@ export const SampleSchema = new Schema({
     lastUpdateAt: {
         type: Date,
         default: Date.now,
-    }
+    },
 });
 
-export interface ISampleBase extends IDocument {
-    // properties
-    sample: boolean;
-    createdAt: Date;
-    lastUpdateAt: Date;
+export interface IWorkspaceBase extends IDocument {
+    name: string;
+
+    createdAt?: Date;
+    lastUpdateAt?: Date;
 
     // methods
 }
 
-export type ISampleModel = Model<ISampleBase>
+export type IWorkspaceModel = Model<IWorkspaceBase>
 
 // Middleware
 
-SampleSchema.pre<ISampleBase>('save', function (next) {
+WorkspaceSchema.pre<IWorkspaceBase>('save', function (next) {
     this._new = this.isNew;
     this._modified = this.isModified();
     
     next();
 });
 
-SampleSchema.post('save', async function(doc: ISampleBase) {
+WorkspaceSchema.post('save', async function(doc: IWorkspaceBase) {
     if (doc._new) {
         //await PublishEvent('user.new', doc.getSafe());
     } else if (doc._modified){
@@ -45,8 +49,8 @@ SampleSchema.post('save', async function(doc: ISampleBase) {
 // Methods and virtuals
 
 /*
-SampleSchema.methods.comparePassword = function() {
+WorkspaceSchema.methods.comparePassword = function() {
 };
 */
 
-export const SampleModel = model<ISampleBase, ISampleModel>('<model_name>', SampleSchema);
+export const WorkspaceModel = model<IWorkspaceBase, IWorkspaceModel>('workspace', WorkspaceSchema);

@@ -8,6 +8,9 @@ import response from '../../helpers/response';
 // Controllers
 import UserService from '../../services/user.service';
 
+const defaultWorkspace = '5f60a3b484f1d50e673bfd69';
+const defaultUserRole = '5f60a3b484f1d50e673bfd6a';
+
 const router = express.Router();
 
 router.use(express.json());
@@ -25,8 +28,18 @@ router.post('/sign-up', async (req, res) => {
     }
 
     try {
-        const user = await UserService.Create(body);
+        const user = await UserService.Create({
+            ...body,
+            permissions: [
+                {
+                    workspace: defaultWorkspace,
+                    role: defaultUserRole,
+                }
+            ]
+        });
         const token = user.generateJWT();
+
+        // Add workspace logic etc. here
 
         user.loginHistory.push({
             ip: req.connection.remoteAddress || '',

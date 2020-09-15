@@ -12,12 +12,16 @@ export default class UserService {
     }
 
     static async GetByEmail(email: string): Promise<IUserBase | null>{
-        const user = await UserModel.findOne({ email: email });
+        const user = await UserModel.findOne({ email: email })
+            .populate('permissions.workspace')
+            .populate('permissions.role');
         return user;
     }
 
     static async GetById(id: string): Promise<IUserBase | null> {
-        const user = await UserModel.findById(id);
+        const user = await UserModel.findById(id)
+            .populate('permissions.workspace')
+            .populate('permissions.role');
         return user;
     }
 
@@ -50,5 +54,10 @@ export default class UserService {
             await user.save();
         }
         return user;
+    }
+
+    // DANGER ZONE
+    static async Clean(): Promise<unknown>{
+        return await UserModel.remove({});
     }
 }

@@ -6,7 +6,8 @@
     "build": "tsc",
     "start": "ts-node src/index.ts",
     "dev": "nodemon",
-    "es:lint": "eslint --ext .ts ./src"
+    "es:lint": "eslint --ext .ts ./src",
+    "migration:setup": "ts-node src/migrations/setup.ts"
   },
   "license": "MIT",
   "devDependencies": {
