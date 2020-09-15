@@ -1,32 +1,37 @@
-import { Document, Schema, Types } from 'mongoose';
+import { Schema } from 'mongoose';
 
 export type UserResponse = {
     _id: Schema.Types.ObjectId;
+
+    // basic
+    email: string;
+    phoneNumber: string;
+
+    // state
+    banned: boolean;
+
+    // meta
     firstName: string;
     lastName: string;
-    phoneNumber: string;
-    email: string;
-    verified: boolean;
-    banned: boolean;
     profilePictureURL: string;
+
+    // verification
+    emailVerified: boolean;
+
+    // history
     createdAt: Date;
     lastUpdateAt: Date;
-    instagramURL: string;
-    country: string;
-    b2bMemberships: Types.Array<IB2BMembershipSchema>;
+    loginHistory: [{
+        loginAt: Date;
+        ip: string;
+    }];
+
+    // devices
+    deviceIds: [string];
+
+    // metadata
+    userMetadata?: Map<string, unknown>;
+    appMetadata?: Map<string, unknown>;
 }
 
 export type Token = string;
-
-enum B2BMembershipStatus {
-    Pending = 0,
-    Approved = 1,
-    Rejected = 2
-}
-
-export interface IB2BMembershipSchema extends Document {
-    partnerId: Schema.Types.ObjectId;
-    status: B2BMembershipStatus;
-    requestedAt: Date;
-    respondedAt: Date;
-}
