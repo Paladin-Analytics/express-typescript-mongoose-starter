@@ -21,24 +21,22 @@ export type UserResponse = {
     // history
     createdAt: Date;
     lastUpdateAt: Date;
-    loginHistory: [{
+    loginHistory: {
         loginAt: Date;
         ip: string;
-    }];
+    }[];
 
     // devices
-    deviceIds: [string];
+    deviceIds: string[];
 
     // metadata
-    userMetadata?: Map<string, unknown>;
-    appMetadata?: Map<string, unknown>;
+    userMetadata?: { [key: string]: unknown };
+    appMetadata?: { [key: string]: unknown };
 
-    permissions: [
-        {
-            workspace: unknown;
-            role: unknown;
-        }
-    ]
+    permissions: {
+        workspace: unknown;
+        role: unknown;
+    }[]
 }
 
 export type Token = {

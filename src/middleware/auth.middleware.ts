@@ -1,5 +1,5 @@
 import { jwtKey } from '../config/jwt';
-import { scopes, roles } from '../config/permissions';
+import { scopes } from '../config/permissions';
 
 import { Types } from 'mongoose';
 import expressjwt, { IsRevokedCallback } from 'express-jwt';

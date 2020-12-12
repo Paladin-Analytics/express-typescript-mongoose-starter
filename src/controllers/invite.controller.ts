@@ -2,6 +2,17 @@ import { Types } from 'mongoose';
 import express, { Request, Response } from 'express';
 import { OK, INTERNAL_SERVER_ERROR, NOT_FOUND, BAD_REQUEST, CREATED, FORBIDDEN, CONFLICT } from 'http-status-codes';
 
+import {
+    Body,
+    Controller,
+    Get,
+    Path,
+    Post,
+    Query,
+    Route,
+    SuccessResponse,
+} from "tsoa";
+
 import response from '../helpers/response';
 
 // Services
@@ -11,6 +22,11 @@ import UserService from '../services/user.service';
 // types
 import { AuthenticatedRequest, checkScope } from '../middleware/auth.middleware';
 
+@Route("invite")
+export class InviteController extends Controller{
+
+}
+/*
 const router = express.Router();
 router.use(express.json());
 
@@ -156,3 +172,4 @@ router.patch('/:invite_id', checkScope('workspace.invite.update'), async (req: R
 });
 
 export default router;
+*/

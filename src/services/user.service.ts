@@ -1,4 +1,4 @@
-import { model} from 'mongoose';
+import { model } from 'mongoose';
 
 import { IUserModel, IUserBase, UserSchema } from '../models/user.model';
 
@@ -34,7 +34,6 @@ export default class UserService {
             user.phoneNumber = newObject.phoneNumber || user.phoneNumber;
             user.email = newObject.email || user.email;
             user.profilePictureURL = newObject.profilePictureURL || user.profilePictureURL;
-    
             user.userMetadata = newObject.userMetadata || user.userMetadata;
     
             if (newObject.deviceId) {

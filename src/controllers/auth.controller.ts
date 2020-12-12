@@ -1,42 +1,111 @@
-import express from 'express';
-import { BAD_REQUEST, CREATED, UNAUTHORIZED, INTERNAL_SERVER_ERROR, 
-        OK, NOT_FOUND, CONFLICT, FORBIDDEN } from 'http-status-codes';
+import {
+    Body,
+    Controller,
+    Tags,
+    Get,
+    Path,
+    Post,
+    Query,
+    Route,
+    SuccessResponse,
+    Response,
+    Request,
+    ValidateError,
+    
+} from "tsoa";
 
-// Helpers
-import response from '../helpers/response';
+import { Request as ExpRequest } from 'express';
+import isEmail from 'validator/lib/isEmail';
 
 // Controllers
 import UserService from '../services/user.service';
 
-const defaultWorkspace = '5f60de416265931ee94f0e2f';
-const defaultUserRole = '5f60de416265931ee94f0e30';
+// Types
+import { IUserBase } from '../models/user.model';
+import { UserResponse } from '../types/user.types';
+import { ValidateErrorJSON } from '../types/response.types';
 
-const router = express.Router();
+// Erros
+import { NotFoundError, UnauthorizedError } from '../common/errors';
 
-router.use(express.json());
+interface SignUpRequestBody {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    
+    /**
+     * Should contain at least 6 characters
+     */
+    password: string;
+    testing?: string;
+}
 
-router.post('/sign-up', async (req, res) => {
-    const { body } = req;
+interface SignInRequestBody {
+    email: string;
+    password: string;
+}
 
-    try {
-        const existingUser = await UserService.GetByEmail(body.email);
-        if (existingUser) {
-            return response(res, CONFLICT, 'Email already exists', null);
-        }
-    } catch(e) {
-        return response(res, INTERNAL_SERVER_ERROR, e.message, null);
-    }
+interface VerifyEmailRequestBody {
+    /**
+     * ID of the user that needs to be verified
+     */
+    userId: string;
+    /**
+     * This code is sent to the user via email or text
+     */
+    code: string;
+}
 
-    try {
-        const user = await UserService.Create({
-            ...body,
-            permissions: [
-                {
-                    workspace: defaultWorkspace,
-                    role: defaultUserRole,
+@Route("auth")
+@Tags("Authentication")
+export class AuthController extends Controller{
+    /**
+    * Creates a new user
+    */
+    @Post("signup")
+    @SuccessResponse("201", "Created")
+    @Response<ValidateErrorJSON>(406, "Invalid Request")
+
+    public async SignUp(@Body() requestBody: SignUpRequestBody, @Request() req: ExpRequest): Promise<{
+        user: UserResponse,
+        token: string
+    }>{
+        if (!isEmail(requestBody.email)) {
+            throw new ValidateError({
+                'email': {
+                    message: 'Email is invalid',
                 }
-            ]
-        });
+             }, 'Invalid email provided');
+        }
+        if (requestBody.password.length < 6) {
+            throw new ValidateError({
+                'password': {
+                    message: 'Password should have at least 6 characters',
+                }
+             }, 'Password require 6 characters');
+        }
+
+        let existingUser;
+
+        try {
+            existingUser = await UserService.GetByEmail(requestBody.email);
+        } catch(e) {
+            throw new Error(e);
+        }
+
+        if (existingUser) {
+            throw new ValidateError({
+                'email': {
+                    message: 'Email already exists',
+                }
+             }, 'Email already exists');
+        }
+
+        const user = await UserService.Create({
+            ...requestBody,
+        } as IUserBase);
+
         const token = user.generateJWT();
 
         // Add workspace logic etc. here
@@ -46,27 +115,28 @@ router.post('/sign-up', async (req, res) => {
             jwtid: token.jwtid,
         });
         user.save();
-        
-        return response(res, CREATED, 'Success', {
+
+        this.setStatus(201);
+
+        return {
             user: user.getSafe(),
             token: token.token,
-        });
-    } catch (e) {
-        if (e.name === 'ValidationError') {
-            console.log(`Validation Error = ${JSON.stringify(e)}`);
-            return response(res, BAD_REQUEST, 'Invalid Data', null, e.message);
         }
-        return response(res, INTERNAL_SERVER_ERROR, e.message, null);
     }
-});
 
-router.post('/sign-in', async (req, res) => {
-    const { body } = req;
+    /**
+     * User sign in
+     */
+    @Post("signin")
+    @SuccessResponse("200", "Success")
 
-    try {
-        const user = await UserService.GetByEmail(body.email);
+    public async SignIn(@Body() requestBody: SignInRequestBody, @Request() req: ExpRequest): Promise<{
+        user: UserResponse,
+        token: string
+    }> {
+        const user = await UserService.GetByEmail(requestBody.email);
 
-        if (user && user?.comparePassword(body.password)) {
+        if (user && user?.comparePassword(requestBody.password)) {
             const token = user.generateJWT();
 
             user.loginHistory.push({
@@ -76,17 +146,67 @@ router.post('/sign-in', async (req, res) => {
             });
             await user.save();
 
-            return response(res, CREATED, 'Success', { 
+            return { 
                 user: user.getSafe(),
                 token: token.token,
-            });
+            };
+        } else {
+            throw new UnauthorizedError('Unauthorized');
         }
-        return response(res, UNAUTHORIZED, 'Invalid email or password', null);
-    } catch (e) {
-        console.log(e);
-        return response(res, INTERNAL_SERVER_ERROR, e.message, null);
     }
-});
+
+    /**
+     * Verify the user's email. A verification code will be sent to user's email. The frontend will receive this code through a link or input field. Please pass these values as parameters
+     */
+    @Post("verifyEmail")
+    @SuccessResponse(200, "User's email verified successfully.")
+    @Response<{ message: string}>(404, "Invalid userId")
+    @Response<{ message: string}>(401, "Unauthorized")
+
+    public async VerifyEmail(@Body() requestBody: VerifyEmailRequestBody): Promise<{ emailVerified: boolean }>{
+        let user: IUserBase | null;
+        try {
+            user = await UserService.GetById(requestBody.userId);
+        } catch(e) {
+            throw new Error(e);
+        }
+
+        if (!user) {
+            throw new NotFoundError('UserId not found');
+        }
+
+        try {
+            if (user.compareEmailVerificationCode(requestBody.code)) {
+                user.emailVerified = false;
+                user.emailVerification = undefined;
+                await user.save();
+                return { 
+                    emailVerified: true
+                };
+            }
+        } catch (e) {
+            throw new Error(e);
+        }
+
+        throw new UnauthorizedError('Invalid verification code');
+    }
+
+    // Forgot Password
+    @Post("forgotPassword")
+    @SuccessResponse(200, "Password reset token generated and sent to the user")
+    public async ForgotPassword(): Promise<unknown>{
+        return;
+    }
+
+    // Forgot Password
+    @Post("resetPassword")
+    @SuccessResponse(200, "Success")
+    public async ResetPassword(): Promise<unknown>{
+        return;
+    }
+}
+
+/*
 
 router.post('/verify-email', async(req, res) => {
     const { body } = req;
@@ -162,3 +282,5 @@ router.post('/reset-password', async (req, res) => {
 });
 
 export default router;
+
+*/

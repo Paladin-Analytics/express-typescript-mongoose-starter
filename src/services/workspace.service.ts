@@ -1,6 +1,7 @@
-import { model } from 'mongoose';
+import { model, deleteModel } from 'mongoose';
 import { IWorkspaceModel, IWorkspaceBase, WorkspaceSchema } from '../models/Workspace.model';
 
+deleteModel('workspaces');
 export const WorkspaceModel = model<IWorkspaceBase, IWorkspaceModel>('workspaces', WorkspaceSchema);
 
 export default class WorkspaceService {

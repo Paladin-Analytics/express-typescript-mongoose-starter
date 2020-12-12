@@ -1,6 +1,7 @@
-import { model, Types } from 'mongoose';
+import { model, Types, deleteModel } from 'mongoose';
 import { IInviteModel, IInviteBase, InviteSchema } from '../models/invite.model';
 
+deleteModel('invites');
 export const InviteModel = model<IInviteBase, IInviteModel>('invites', InviteSchema);
 
 export default class InviteService {

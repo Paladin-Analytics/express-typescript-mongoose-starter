@@ -10,7 +10,7 @@ import UserService from '../services/user.service';
 
 const workspaces = [
     {
-        name: 'avocado:all',
+        name: 'avocado:users',
     }
 ];
 

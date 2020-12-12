@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 config();
 
-import routes from './routes';
+import routes from './app';
 import './common/db';
 
 const port = process.env.PORT || 3000;
