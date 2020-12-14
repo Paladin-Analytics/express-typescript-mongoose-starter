@@ -1,9 +1,8 @@
 import { jwtKey, jwtExpTime } from '../config/jwt';
-import { roles } from '../config/permissions';
 
 import isEmail from 'validator/lib/isEmail';
 import { compareSync, hashSync } from 'bcryptjs';
-import { Types, Model, Schema } from 'mongoose';
+import { Model, Schema } from 'mongoose';
 import moment from 'moment';
 import { generate } from 'randomstring';
 import { sign as jwtSign, Secret } from 'jsonwebtoken';
@@ -148,21 +147,6 @@ export const UserSchema = new Schema({
         type: Schema.Types.Mixed,
         default: {},
     },
-
-    // Permissions
-    permissions: [
-        {
-            workspace: {
-                type: Types.ObjectId,
-                ref: 'workspaces',
-            },
-            role: {
-                type: String,
-                enum: roles,
-                default: 'user'
-            }
-        }
-    ]
 });
 
 export interface IUserBase extends IDocument {
@@ -220,13 +204,8 @@ export interface IUserBase extends IDocument {
     userMetadata: Map<string, unknown>;
     appMetadata: Map<string, unknown>;
 
-    permissions: Array<{
-        workspace: Types.ObjectId;
-        role: string;
-    }>;
-
     // methods
-    setAndSendPasswordReset(): Promise<boolean>;
+    setAndSendPasswordReset(): Promise<string>;
     comparePassword(password: string): boolean;
     compareEmailVerificationCode(code: string): boolean;
     compareForgotPassword(code: string): boolean;
@@ -262,7 +241,6 @@ UserSchema.pre<IUserBase>('save', function (next) {
             expiresAt: moment().add(30 * 60, 's').toDate(),
         }
     }
-    
     next();
 });
 
@@ -288,7 +266,7 @@ UserSchema.post('save', async function(doc: IUserBase) {
 
 // Methods and virtuals
 
-UserSchema.methods.setAndSendPasswordReset = async function(): Promise<boolean> {
+UserSchema.methods.setAndSendPasswordReset = async function(): Promise<string> {
     const resetCode = generate({
         length: 6,
         charset: 'numeric',
@@ -296,10 +274,10 @@ UserSchema.methods.setAndSendPasswordReset = async function(): Promise<boolean> 
 
     this.forgotPassword = <IHashCodeSchema>{
         hash: hashSync(resetCode, 10),
-        expiresAt: moment().add(7, 'd').toDate(),
+        expiresAt: moment().add(30 * 60, 's').toDate(),
     }
 
-   return await SendTemplatedEmail(PASSWORD_RESET, { 
+    await SendTemplatedEmail(PASSWORD_RESET, { 
         code: resetCode, 
         user: {
             _id: this._id,
@@ -308,6 +286,10 @@ UserSchema.methods.setAndSendPasswordReset = async function(): Promise<boolean> 
             email: this.email,
         }
     });
+
+    await this.save();
+
+    return resetCode;
 }
 
 UserSchema.methods.comparePassword = function(password: string): boolean {
@@ -322,6 +304,9 @@ UserSchema.methods.compareEmailVerificationCode = function(code: string): boolea
 };
 
 UserSchema.methods.compareForgotPassword = function(code: string): boolean {
+    const newHash = hashSync(code, 10);
+    console.log(`NEW HASH = ${newHash} OLD HASH = ${this.forgotPassword.hash} Matching=${compareSync(code, this.forgotPassword.hash)}`);
+
     if (this.forgotPassword && this.forgotPassword.hash && this.forgotPassword.expiresAt) {
         return compareSync(code, this.forgotPassword.hash) && new Date() < this.forgotPassword.expiresAt;
     }

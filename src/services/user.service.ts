@@ -3,7 +3,7 @@ import { model } from 'mongoose';
 import { IUserModel, IUserBase, UserSchema } from '../models/user.model';
 
 interface IUserUpdate extends IUserBase{
-    deviceId: string;
+    deviceId?: string;
 }
 
 export const UserModel = model<IUserBase, IUserModel>('users', UserSchema);

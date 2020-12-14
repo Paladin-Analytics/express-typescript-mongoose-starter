@@ -2,10 +2,7 @@ import {
     Body,
     Controller,
     Tags,
-    Get,
-    Path,
     Post,
-    Query,
     Route,
     SuccessResponse,
     Response,
@@ -55,6 +52,19 @@ interface VerifyEmailRequestBody {
      * This code is sent to the user via email or text
      */
     code: string;
+}
+
+interface ForgotPasswordRequestBody {
+    /**
+     * Email to reset the password for
+     */
+    email: string;
+}
+
+interface ResetPasswordRequestBody {
+    userId: string;
+    code: string;
+    newPassword: string;
 }
 
 @Route("auth")
@@ -194,93 +204,45 @@ export class AuthController extends Controller{
     // Forgot Password
     @Post("forgotPassword")
     @SuccessResponse(200, "Password reset token generated and sent to the user")
-    public async ForgotPassword(): Promise<unknown>{
-        return;
+    public async ForgotPassword(@Body() requestBody: ForgotPasswordRequestBody): Promise<{ message: string }>{
+        const user = await UserService.GetByEmail(requestBody.email);
+
+        if (!user) {
+            throw new NotFoundError('Invalid email');
+        }
+
+        const resetCode = await user.setAndSendPasswordReset();
+        console.log(resetCode);
+        
+        return { message: 'Email sent' };
     }
 
-    // Forgot Password
     @Post("resetPassword")
     @SuccessResponse(200, "Success")
-    public async ResetPassword(): Promise<unknown>{
-        return;
-    }
-}
+    public async ResetPassword(@Body() requestBody: ResetPasswordRequestBody): Promise<{ message: string}>{
 
-/*
+        if (requestBody.newPassword.length < 6) {
+            throw new ValidateError({
+                'password': {
+                    message: 'Password should have at least 6 characters',
+                }
+             }, 'Password require 6 characters');
+        }
 
-router.post('/verify-email', async(req, res) => {
-    const { body } = req;
-    
-    if (!body.user_id || !body.code) return response(res, BAD_REQUEST, 'Missing fields', null);
-
-    try {
-        const user = await UserService.GetById(body.user_id);
+        const user = await UserService.GetById(requestBody.userId);
         if (!user) {
-            return response(res, NOT_FOUND, 'Invalid user_id', null);
+            throw new NotFoundError('UserId not found');
         }
 
-        if (user.compareEmailVerificationCode(body.code)) {
-            user.emailVerified = false;
-            user.emailVerification = undefined;
-            await user.save();
-            return response(res, OK, 'Success', null);
-        }
-    } catch (e) {
-        console.log(e);
-        return response(res, INTERNAL_SERVER_ERROR, e.message, null);
-    }
-
-    return response(res, UNAUTHORIZED, 'Invalid verification code', null);
-});
-
-router.post('/forgot-password', async (req, res) => {
-    const { body } = req;
-
-    if (!body || !body.email) return response(res, BAD_REQUEST, 'Missing email', null);
-
-    try {
-        const user = await UserService.GetByEmail(body.email);
-
-        if (!user) {
-            return response(res, NOT_FOUND, 'Invalid user_id', null);
-        }
-
-        await user.setAndSendPasswordReset();
-        await user.save();
-
-        return response(res, OK, 'Reset email sent', null);
-    } catch (e) {
-        console.log(e);
-        return response(res, INTERNAL_SERVER_ERROR, e.message, null);
-    }
-});
-
-router.post('/reset-password', async (req, res) => {
-    const { body } = req;
-
-    if (!body.newPassword || body.newPassword.length < 6) 
-        return response(res, BAD_REQUEST, 'Password should have at least 6 characters', null);
-    
-    try {
-        const user = await UserService.GetById(body.user_id);
-        if (!user) {
-            return response(res, NOT_FOUND, 'Invalid user_id', null);
-        }
-        if (user.compareForgotPassword(body.code)) {
-            user.password = body.newPassword;
+        if (user.compareForgotPassword(requestBody.code)) {
+            user.password = requestBody.newPassword;
             user.forgotPassword = undefined;
             user.lastPasswordResetAt = new Date();
             await user.save();
-            return response(res, OK, 'Password Reset', null);
+        } else {
+            throw new UnauthorizedError('Invalid reset code');
         }
-
-        return response(res, FORBIDDEN, 'Invalid pasword reset code', null);
-    } catch (e) {
-        console.log(e);
-        return response(res, INTERNAL_SERVER_ERROR, e.message, null);
+        
+        return { message: 'Password Reset' };
     }
-});
-
-export default router;
-
-*/
+}

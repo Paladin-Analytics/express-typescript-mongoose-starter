@@ -17,6 +17,7 @@ import UserService from '../src/services/user.service';
 import { IUserBase } from '../src/models/user.model';
 
 let createdUser: IUserBase;
+let resetCode: string;
 
 beforeAll(async done => {
     createdUser = await UserService.Create({
@@ -26,6 +27,10 @@ beforeAll(async done => {
         phoneNumber: '0765635454',
         password: 'testing123',
     } as IUserBase);
+
+    resetCode = await createdUser.setAndSendPasswordReset();
+    console.log(`RESET CODE = ${resetCode}`);
+
     done();
 })
 
@@ -151,6 +156,117 @@ describe('POST /auth/verifyEmail', () => {
             done();
         });
     });
+});
+
+describe('POST /auth/forgotPassword', () => {
+    test('should return a 404 when the email is invalid', done => {
+        request(app)
+        .post('/auth/forgotPassword')
+        .type('json')
+        .send(JSON.stringify({
+            email: 'nisal23423@gmail.com',
+        }))
+        .set('Accept', 'application/json')
+        .then(response => {
+            expect(response.status).toBe(404);
+            done();
+        });
+    });
+
+    test('should return a 200 when the password reset code is sent', done => {
+        request(app)
+        .post('/auth/forgotPassword')
+        .type('json')
+        .send(JSON.stringify({
+            email: 'hello@world.com',
+        }))
+        .set('Accept', 'application/json')
+        .then(response => {
+            expect(response.status).toBe(200);
+            done();
+        });
+    });
+});
+
+describe('POST /auth/resetPassword', () => {
+    test('should return a 406 when the new password is less than 6 characters', done => {
+        request(app)
+        .post('/auth/resetPassword')
+        .type('json')
+        .send(JSON.stringify({
+            userId: createdUser._id,
+            code: '234234',
+            newPassword: 'test',
+        }))
+        .set('Accept', 'application/json')
+        .then(response => {
+            expect(response.status).toBe(406);
+            done();
+        });
+    });
+
+    test('should return a 404 when the user id is not valid', done => {
+        request(app)
+        .post('/auth/resetPassword')
+        .type('json')
+        .send(JSON.stringify({
+            userId: '5fd45de70f38e2be7784555a',
+            code: '234234',
+            newPassword: 'testing123',
+        }))
+        .set('Accept', 'application/json')
+        .then(response => {
+            expect(response.status).toBe(404);
+            done();
+        });
+    });
+
+    test('should return a 401 when the code is invalid', done => {
+        request(app)
+        .post('/auth/resetPassword')
+        .type('json')
+        .send(JSON.stringify({
+            userId: createdUser._id,
+            code: '234234',
+            newPassword: 'testing123',
+        }))
+        .set('Accept', 'application/json')
+        .then(response => {
+            expect(response.status).toBe(401);
+            done();
+        });
+    });
+
+    test('should return a 200 when the password is reset', done => {
+        request(app)
+        .post('/auth/resetPassword')
+        .type('json')
+        .send(JSON.stringify({
+            userId: createdUser._id,
+            code: resetCode,
+            newPassword: 'testingnewpassword',
+        }))
+        .set('Accept', 'application/json')
+        .then(response => {
+            expect(response.status).toBe(200);
+            done();
+        });
+    });
+
+    test('should return 200 if the password got changed', done => {
+        request(app)
+        .post('/auth/signin')
+        .type('json')
+        .send(JSON.stringify({
+            email: 'hello@world.com',
+            password: 'testingnewpassword',
+        }))
+        .set('Accept', 'application/json')
+        .then(response => {
+            expect(response.status).toBe(200);
+            done();
+        });
+    })
 });
 
 afterAll(async (done) => {

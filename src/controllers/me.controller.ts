@@ -1,49 +1,121 @@
-import express, { Request, Response } from 'express';
-import { OK, INTERNAL_SERVER_ERROR, NOT_FOUND, BAD_REQUEST } from 'http-status-codes';
+import {
+    Body,
+    Controller,
+    Tags,
+    Get,
+    Patch,
+    Path,
+    Post,
+    Query,
+    Route,
+    SuccessResponse,
+    Security,
+    Response,
+    Request,
+    ValidateError,
+    
+} from "tsoa";
 
-import response from '../helpers/response';
+import { Request as ExpRequest, request } from 'express';
+import isEmail from 'validator/lib/isEmail';
 
-// Services
+// Controllers
 import UserService from '../services/user.service';
 
-// types
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
+// Types
+import { AuthenticatedRequest } from '../types/response.types';
+import { UserResponse } from '../types/user.types';
 
-const router = express.Router();
-router.use(express.json());
+// Erros
+import { NotFoundError } from '../common/errors';
 
-router.get('/', async(req: Request, res: Response) => {
-    const authReq = <AuthenticatedRequest>req;
+interface UserPatchRequest{
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    email: string;
+    profilePictureURL?: string;
+}
 
-    try {
-        const user = await UserService.GetById(authReq.user.user_id);
-        if (user) {
-            return response(res, OK, 'Success', user.getSafe());
+interface UpdatePasswordRequest{
+    newPassword: string;
+}
+
+@Route("me")
+@Tags("Account")
+export class MeController extends Controller{
+    /**
+    * Get current user
+    */
+    @Security("jwt")
+    @Get()
+    @SuccessResponse("200", "Success")
+
+    public async Get(@Request() request: AuthenticatedRequest): Promise<UserResponse>{
+        const user = await UserService.GetById(request.user.user_id);
+
+        if (!user) {
+            throw new NotFoundError('User not found');
         }
-        return response(res, NOT_FOUND, 'Not found', null);
-    } catch(e) {
-        return response(res, INTERNAL_SERVER_ERROR, 'Internal server error', null);
+        return user.getSafe();
     }
-});
 
-router.patch('/', async(req: Request, res: Response) => {
-    const authReq = <AuthenticatedRequest>req;
-    
-    const { body } = authReq;
+    /**
+     * Patch current user's details
+     */
+    @Security("jwt")
+    @Patch()
+    @SuccessResponse("201", "Updated")
+    public async Patch(@Body() requestBody: UserPatchRequest, @Request() request: AuthenticatedRequest): Promise<UserResponse> {
+        const user = await UserService.GetById(request.user.user_id);
 
-    if (!body) return response(res, BAD_REQUEST, 'Missing field', null);
-
-    try {
-        const user = await UserService.Update(authReq.user.user_id, body);
-        
-        if (user) {
-            return response(res, OK, 'Success', user.getSafe());
+        if (!user) {
+            throw new NotFoundError('User not found');
         }
-        
-        return response(res, NOT_FOUND, 'Not found', null);
-    } catch(e) {
-        return response(res, INTERNAL_SERVER_ERROR, 'Internal server error', null);
-    }
-});
 
-export default router;
+        user.firstName = requestBody.firstName;
+        user.lastName = requestBody.lastName;
+        user.phoneNumber = requestBody.phoneNumber;
+        
+        if (requestBody.profilePictureURL) user.profilePictureURL = requestBody.profilePictureURL;
+
+        if (isEmail(user.email)) {
+            user.email = requestBody.email;
+        }
+
+        await user.save();
+
+        return user.getSafe();
+    }
+
+    /**
+     * Update current user's password
+     */
+    @Security("jwt")
+    @Post("updatePassword")
+    @SuccessResponse("201", "Password Updated")
+    public async UpdatePassword(@Body() requestBody: UpdatePasswordRequest, @Request() request: AuthenticatedRequest): Promise<{ message: string}>{
+        if (requestBody.newPassword.length < 6) {
+            throw new ValidateError({
+                'password': {
+                    message: 'Password should have at least 6 characters',
+                }
+             }, 'Password require 6 characters');
+        }
+
+        const user = await UserService.GetById(request.user.user_id);
+
+        if (!user) {
+            throw new NotFoundError('User not found');
+        }
+
+        user.password = requestBody.newPassword;
+        await user.save();
+
+        this.setStatus(201);
+        return {
+            message: 'Password Updated',
+        }
+    }
+
+}
